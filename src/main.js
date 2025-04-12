@@ -94,7 +94,7 @@ starfield.addToScene(scene);
 
 // Load Earth texture
 const textureLoader = new THREE.TextureLoader();
-const earthTexture = textureLoader.load('/assets/earth.jpg');
+const earthTexture = textureLoader.load(import.meta.env.BASE_URL + '/assets/earth.jpg');
 
 // Create globe geometry and material
 const globeGeometry = new THREE.SphereGeometry(2.5, 64, 64); // radius, widthSegments, heightSegments
@@ -114,7 +114,7 @@ globeGlow.useRimGlow(scene); // Use rim glow instead
 const markers = [];
 
 // Load city data from JSON file
-fetch('/assets/cities.json')
+fetch(import.meta.env.BASE_URL + '/assets/cities.json')
   .then(response => response.json())
   .then(cities => {
     // Add markers for each city

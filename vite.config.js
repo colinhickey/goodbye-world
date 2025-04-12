@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  base: 'goodbye-world', // This should match your GitHub repository name
+  base: '/goodbye-world/', // This should match your GitHub repository name
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
