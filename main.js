@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-
-// Remove the cities import since we'll fetch the JSON
+import { Starfield } from './modules/starfield.js';
+import { GlobeGlow } from './modules/globeglow.js';
 
 // Create button group container
 const buttonContainer = document.createElement('div');
@@ -88,67 +88,9 @@ const mouse = new THREE.Vector2();
 let mouseX = 0;
 let mouseY = 0;
 
-// Create starfield backdrop
-function createStarfield() {
-  // Create star particles
-  const starsGeometry = new THREE.BufferGeometry();
-  const starCount = 1000;
-  
-  // Create positions array for stars
-  const positions = new Float32Array(starCount * 3);
-  const colors = new Float32Array(starCount * 3);
-  const sizes = new Float32Array(starCount);
-  
-  // Create stars in a spherical pattern surrounding the scene
-  const radius = 50; // Large radius for the starfield
-  
-  for (let i = 0; i < starCount; i++) {
-    // Random spherical coordinates
-    const theta = Math.random() * Math.PI * 2;
-    const phi = Math.acos(2 * Math.random() - 1);
-    
-    // Convert to cartesian coordinates
-    const x = radius * Math.sin(phi) * Math.cos(theta);
-    const y = radius * Math.sin(phi) * Math.sin(theta);
-    const z = radius * Math.cos(phi);
-    
-    positions[i * 3] = x;
-    positions[i * 3 + 1] = y;
-    positions[i * 3 + 2] = z;
-    
-    // Random star brightness/color (white to blue-ish)
-    const brightness = 0.5 + Math.random() * 0.5;
-    colors[i * 3] = brightness;
-    colors[i * 3 + 1] = brightness;
-    colors[i * 3 + 2] = brightness + Math.random() * 0.3; // Slightly more blue
-    
-    // Random star size
-    sizes[i] = 0.5 + Math.random() * 3.0;
-  }
-  
-  starsGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  starsGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-  starsGeometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
-  
-  // Create material for the stars
-  const starsMaterial = new THREE.PointsMaterial({
-    size: 0.15,
-    transparent: true,
-    opacity: 1,
-    vertexColors: true,
-    blending: THREE.AdditiveBlending,
-    sizeAttenuation: true
-  });
-  
-  // Create the final starfield points
-  const starfield = new THREE.Points(starsGeometry, starsMaterial);
-  
-  return starfield;
-}
-
-// Create and add starfield
-const starfield = createStarfield();
-scene.add(starfield);
+// Create and add starfield using the new module
+const starfield = new Starfield(1000, 50);
+starfield.addToScene(scene);
 
 // Load Earth texture
 const textureLoader = new THREE.TextureLoader();
@@ -162,40 +104,11 @@ const globeMaterial = new THREE.MeshBasicMaterial({
 const globe = new THREE.Mesh(globeGeometry, globeMaterial);
 scene.add(globe);
 
-// Add after creating the globe but before adding city markers
+// Create and add glow effect using the new module
+const globeGlow = new GlobeGlow(2.5); // Pass the same radius as the globe
+globeGlow.addToScene(scene);
 
-// Create blue glow effect
-function createGlowEffect() {
-  // Create a slightly larger sphere for the glow effect
-  const glowGeometry = new THREE.SphereGeometry(2.4, 64, 64); // Slightly larger radius than the globe
-  
-  // Create custom material for the glow effect
-  const glowMaterial = new THREE.MeshBasicMaterial({
-    color: 0x0077ff,  // Blue color
-    transparent: true,
-    opacity: 0.25,
-    side: THREE.BackSide, // Render only the inside of the sphere
-  });
-  
-  const glowMesh = new THREE.Mesh(glowGeometry, glowMaterial);
-  return glowMesh;
-}
-
-// Create and add glow effect
-const glow = createGlowEffect();
-scene.add(glow);
-
-// Optional: Add atmospheric scatter effect with second glow layer
-const atmosphereGlow = new THREE.Mesh(
-  new THREE.SphereGeometry(2.6, 64, 64),
-  new THREE.MeshBasicMaterial({
-    color: 0x00ffff,
-    transparent: true,
-    opacity: 0.1,
-    side: THREE.FrontSide
-  })
-);
-scene.add(atmosphereGlow);
+globeGlow.useRimGlow(scene); // Use rim glow instead
 
 // Store all markers for raycasting
 const markers = [];
@@ -312,7 +225,7 @@ renderer.domElement.addEventListener('dblclick', (event) => {
     // Create a circle to visualize the selected area using a RingGeometry instead
     const circleGeometry = new THREE.RingGeometry(circleRadius * 0.9, circleRadius, 64);
     const circleMaterial = new THREE.MeshBasicMaterial({ 
-      color: 0x00ff00,
+      color: 0xff2200,
       opacity: 0.8,
       transparent: true,
       side: THREE.DoubleSide,
@@ -356,7 +269,7 @@ renderer.domElement.addEventListener('dblclick', (event) => {
     populationSummary.style.zIndex = '1000';
     
     populationSummary.innerHTML = `
-      <h3 style="margin: 0 0 10px 0;">Selected Region (${selectedSize})</h3>
+      <h3 style="margin: 0 0 10px 0;">${selectedSize} Impact Area</h3>
       <p style="margin: 0 0 5px 0;">Radius: ${radiusKm} km</p>
       <p style="margin: 0 0 5px 0;">Cities: ${citiesInRadius.length}</p>
       <p style="margin: 0;">Total Population: ${totalPopulation.toLocaleString()}</p>
@@ -377,10 +290,8 @@ function animate() {
   // Update controls
   controls.update();
   
-  // Make stars move slightly with camera rotation
-  // This gives a parallax effect as the globe rotates
-  starfield.rotation.y = -controls.getAzimuthalAngle() * 0.3;
-  starfield.rotation.x = -controls.getPolarAngle() * 0.2;
+  // Update starfield rotation - now using the starfield class method
+  starfield.update(controls);
   
   // Check for marker intersections
   raycaster.setFromCamera(mouse, camera);

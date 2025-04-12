@@ -40,8 +40,8 @@ git clone https://github.com/yourusername/globe-visualization.git cd globe-visua
 
 
 2. Start a local development server:
-Using Node.js
-npx serve
+
+npx vite
 
 
 3. Open your browser and navigate to `http://localhost:5000` (or whatever port your server is using)
