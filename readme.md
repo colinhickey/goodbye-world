@@ -41,10 +41,16 @@ git clone https://github.com/yourusername/globe-visualization.git cd globe-visua
 
 2. Start a local development server:
 
-npx vite
+npm run dev
 
 
 3. Open your browser and navigate to `http://localhost:5000` (or whatever port your server is using)
+
+4. Publish to github pages:
+-create dist folder:
+npm run build
+-publish build to github pages:
+npm run deploy
 
 ## Usage
 
@@ -64,4 +70,12 @@ The city data is loaded from a JSON file generated from the WorldCities dataset,
 
 ## Project Structure
 
-globe-visualization/ ├── index.html # Main HTML file ├── main.js # Core application code ├── public/ # Assets directory │ ├── earth.jpg # Earth texture map │ └── cities.json # City data └── README.md # Project documentation
+globe-visualization/ 
+├── index.html # Main HTML file 
+├── main.js # Core application code 
+├── public/ # Assets directory 
+│ 
+├── earth.jpg # Earth texture map 
+│ 
+└── cities.json # City data 
+└── README.md # Project documentation
