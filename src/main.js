@@ -68,6 +68,57 @@ controls.dampingFactor = 0.05;
 controls.minDistance = 3.5; // Prevent zooming too close
 controls.maxDistance = 10; // Prevent zooming too far out
 
+// Mobile device detection
+const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+// Configure orbit controls based on device
+if (isMobile) {
+  // Enable touch rotation
+  controls.enableZoom = true;
+  controls.enablePan = false;
+  controls.rotateSpeed = 0.5; // Slower rotation for more control on mobile
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.1; // More damping for smoother mobile experience
+  
+  // Make buttons larger for touch targets
+  sizes.forEach(size => {
+    const btn = document.getElementById(`size-${size.toLowerCase()}`);
+    btn.style.padding = '12px 20px';
+    btn.style.fontSize = '16px';
+  });
+  
+  // Add a message about double tap for mobile users
+  const mobileHint = document.createElement('div');
+  mobileHint.style.position = 'absolute';
+  mobileHint.style.top = '70px';
+  mobileHint.style.left = '50%';
+  mobileHint.style.transform = 'translateX(-50%)';
+  mobileHint.style.backgroundColor = 'rgba(0,0,0,0.7)';
+  mobileHint.style.color = 'white';
+  mobileHint.style.padding = '10px';
+  mobileHint.style.borderRadius = '5px';
+  mobileHint.style.fontFamily = 'Arial, sans-serif';
+  mobileHint.style.fontSize = '14px';
+  mobileHint.style.zIndex = '1000';
+  mobileHint.style.textAlign = 'center';
+  mobileHint.textContent = 'Double-tap to select an area';
+  document.body.appendChild(mobileHint);
+  
+  // Auto-hide the hint after 5 seconds
+  setTimeout(() => {
+    mobileHint.style.opacity = '0';
+    mobileHint.style.transition = 'opacity 1s ease';
+    
+    // Remove from DOM after fade out
+    setTimeout(() => {
+      document.body.removeChild(mobileHint);
+    }, 1000);
+  }, 5000);
+} else {
+  // Desktop settings
+  controls.rotateSpeed = 1.0;
+}
+
 // Create tooltip element
 const tooltip = document.createElement('div');
 tooltip.style.position = 'absolute';
@@ -162,7 +213,10 @@ function addCityMarker(city) {
 }
 
 // Track mouse position for raycasting
-window.addEventListener('mousemove', (event) => {
+window.removeEventListener('mousemove', mouseMoveHandler); // Remove existing handler if any
+
+// Define the handler function
+function mouseMoveHandler(event) {
   // Calculate mouse position in normalized device coordinates (-1 to +1)
   mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
   mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
@@ -170,7 +224,28 @@ window.addEventListener('mousemove', (event) => {
   // Store actual mouse coordinates for tooltip positioning
   mouseX = event.clientX;
   mouseY = event.clientY;
-});
+}
+
+// Add it back for mouse events
+window.addEventListener('mousemove', mouseMoveHandler);
+
+// Add touch move handler for mobile
+if (isMobile) {
+  renderer.domElement.addEventListener('touchmove', (event) => {
+    // Prevent default to avoid scrolling while trying to interact
+    event.preventDefault();
+    
+    const touch = event.touches[0];
+    
+    // Calculate touch position in normalized device coordinates (-1 to +1)
+    mouse.x = (touch.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(touch.clientY / window.innerHeight) * 2 + 1;
+    
+    // Store actual touch coordinates for tooltip positioning
+    mouseX = touch.clientX;
+    mouseY = touch.clientY;
+  });
+}
 
 camera.position.z = 5;
 
@@ -185,21 +260,66 @@ const radiusValues = {
   'Large': 1000
 };
 
-// Add double-click event listener
+// Variables for double tap detection
+let lastTap = 0;
+let touchTimeout;
+
+// Track if the user is dragging (to prevent selection when rotating)
+let isDragging = false;
+controls.addEventListener('start', () => {
+  isDragging = true;
+});
+controls.addEventListener('end', () => {
+  setTimeout(() => {
+    isDragging = false;
+  }, 300); // Small delay to ensure click doesn't trigger immediately after drag
+});
+
+// Handle mouse double click (desktop)
 renderer.domElement.addEventListener('dblclick', (event) => {
+  handleAreaSelection(event.clientX, event.clientY);
+});
+
+// Handle touch events for mobile
+renderer.domElement.addEventListener('touchstart', (event) => {
+  // Prevent default to avoid scrolling
+  event.preventDefault();
+  
+  const now = new Date().getTime();
+  const timeDiff = now - lastTap;
+  
+  // Detect double tap
+  if (timeDiff < 300 && timeDiff > 0 && !isDragging) {
+    clearTimeout(touchTimeout);
+    
+    // Use the first touch point
+    const touch = event.touches[0];
+    handleAreaSelection(touch.clientX, touch.clientY);
+  } else {
+    // Single tap - wait briefly to see if it's a double tap
+    touchTimeout = setTimeout(function() {
+      // It was a single tap - do nothing
+    }, 300);
+  }
+  
+  lastTap = now;
+});
+
+// Shared function for area selection (used by both mouse and touch)
+function handleAreaSelection(clientX, clientY) {
   // Calculate mouse position in normalized device coordinates
-  const mouseX = (event.clientX / window.innerWidth) * 2 - 1;
-  const mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
+  const normalizedX = (clientX / window.innerWidth) * 2 - 1;
+  const normalizedY = -(clientY / window.innerHeight) * 2 + 1;
   
   // Create raycaster for detecting globe intersection
-  const raycaster = new THREE.Raycaster();
-  raycaster.setFromCamera(new THREE.Vector2(mouseX, mouseY), camera);
+  const selectionRaycaster = new THREE.Raycaster();
+  selectionRaycaster.setFromCamera(new THREE.Vector2(normalizedX, normalizedY), camera);
   
   // Check for intersection with the globe
-  const intersects = raycaster.intersectObject(globe);
+  const intersects = selectionRaycaster.intersectObject(globe);
   
+  // Rest of your existing selection code
   if (intersects.length > 0) {
-    // Get intersection point on the globe
     const intersectionPoint = intersects[0].point;
     
     // Remove existing circle if present
@@ -217,31 +337,27 @@ renderer.domElement.addEventListener('dblclick', (event) => {
     // Get radius based on selected size
     const radiusKm = radiusValues[selectedSize];
     
-    // Convert km to globe units (globe radius is 2.5 units)
-    // Earth's real radius is ~6371 km, so scale accordingly
+    // Convert km to globe units
     const globeRadiusRatio = 2.5 / 6371;
     const circleRadius = radiusKm * globeRadiusRatio;
     
-    // Create a circle to visualize the selected area using a RingGeometry instead
+    // Create a circle to visualize the selected area
     const circleGeometry = new THREE.RingGeometry(circleRadius * 0.9, circleRadius, 64);
     const circleMaterial = new THREE.MeshBasicMaterial({ 
       color: 0xff2200,
       opacity: 0.8,
       transparent: true,
       side: THREE.DoubleSide,
-      depthTest: false,  // This is important - ignore depth testing
-      depthWrite: false  // Don't write to depth buffer
+      depthTest: false,
+      depthWrite: false
     });
     
     regionCircle = new THREE.Mesh(circleGeometry, circleMaterial);
     
-    // Position the circle at the intersection point
+    // Position and orient the circle
     regionCircle.position.copy(intersectionPoint);
-    
-    // Orient the circle to face outward from the globe center
     regionCircle.lookAt(new THREE.Vector3(0, 0, 0));
     
-    // Move it further out from the globe surface to clear the glow
     const direction = intersectionPoint.clone().normalize();
     regionCircle.position.copy(intersectionPoint.clone().add(direction.multiplyScalar(0.05)));
     
@@ -267,6 +383,8 @@ renderer.domElement.addEventListener('dblclick', (event) => {
     populationSummary.style.borderRadius = '5px';
     populationSummary.style.fontFamily = 'Arial, sans-serif';
     populationSummary.style.zIndex = '1000';
+    populationSummary.style.maxWidth = isMobile ? '90%' : '400px';
+    populationSummary.style.textAlign = 'center';
     
     populationSummary.innerHTML = `
       <h3 style="margin: 0 0 10px 0;">${selectedSize} Impact Area</h3>
@@ -277,13 +395,6 @@ renderer.domElement.addEventListener('dblclick', (event) => {
     
     document.body.appendChild(populationSummary);
   }
-});
-
-// Function to find cities within a radius
-function findCitiesInRadius(center, radius) {
-  return markers.filter(marker => {
-    return marker.position.distanceTo(center) <= radius;
-  });
 }
 
 function animate() {
