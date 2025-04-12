@@ -2,8 +2,6 @@
 
 An interactive 3D globe visualization showing major cities around the world with population data, built using Three.js.
 
-![Globe Visualization](screenshots/globe-preview.png)
-
 ## Features
 
 - **Interactive 3D Earth Globe**: Fully navigable Earth with realistic texturing
