@@ -1,13 +1,15 @@
-# Interactive 3D Globe Visualization
+# Interactive 3D Globe Visualization with meteor impact stats 
 
-An interactive 3D globe visualization showing major cities around the world with population data, built using Three.js.
+An interactive 3D globe visualization showing major cities around the world with population data, built using Three.js. Double click to see the impact of a meteor strike. 
+
+[Demo running as a GitHub Page](https://colinhickey.github.io/goodbye-world/)
 
 ## Features
 
-- **Interactive 3D Earth Globe**: Fully navigable Earth with realistic texturing
+- **Interactive 3D Earth Globe**: Navigable Earth with texturing
 - **City Population Data**: Displays major cities around the world with population information
-- **Population Tooltips**: Hover over city markers to see city name, country, and population
-- **Region Selection**: Double-click anywhere on the globe to select a circular region
+- **Population Tooltips**: (Desktop) Hover over city markers to see city name, country, and population
+- **Region Selection**: Double-click anywhere on the globe to select a circular region (nominal meteor impact zone!) 
 - **Population Analysis**: View the total population within the selected region
 - **Adjustable Selection Size**: Choose between Small (100km), Medium (500km), and Large (1000km) selection radii
 - **Atmospheric Effects**: Realistic atmospheric glow around the Earth's edges
@@ -34,7 +36,7 @@ An interactive 3D globe visualization showing major cities around the world with
 
 1. Clone this repository:
 
-git clone https://github.com/yourusername/globe-visualization.git cd globe-visualization
+git clone https://github.com/colinhickey/goodbye-world.git cd goodbye-world
 
 
 2. Start a local development server:
